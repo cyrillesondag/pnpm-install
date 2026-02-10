@@ -1,0 +1,33 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      leftpad:
+        specifier: ~0.0.1
+        version: 0.0.1
+    devDependencies:
+      chalk:
+        specifier: ^5.0.0
+        version: 5.6.2
+
+packages:
+
+  chalk@5.6.2:
+    resolution: {integrity: sha512-7NzBL0rN6fMUW+f7A6Io4h40qQlG+xGmtMxfbnH/K7TAtt8JQWVQK+6g0UXKMeVJoyV5EkkNsErQ8pVD3bLHbA==}
+    engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
+
+  leftpad@0.0.1:
+    resolution: {integrity: sha512-kBAuxBQJlJ85LDc+SnGSX6gWJnJR9Qk4lbgXmz/qPfCOCieCk7BgoN3YvzoNr5BUjqxQDOQxawJJvXXd6c+6Mg==}
+    deprecated: Use the built-in String.padStart function instead
+
+snapshots:
+
+  chalk@5.6.2: {}
+
+  leftpad@0.0.1: {}

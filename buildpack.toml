@@ -1,0 +1,37 @@
+api = "0.7"
+
+[buildpack]
+  homepage = "https://github.com/paketo-buildpacks/pnpm-install"
+  id = "paketo-buildpacks/pnpm-install"
+  name = "Paketo Buildpack for Pnpm Install"
+  sbom-formats = ["application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"]
+
+  [[buildpack.licenses]]
+    type = "Apache-2.0"
+    uri = "https://github.com/paketo-buildpacks/pnpm-install/blob/main/LICENSE"
+
+[metadata]
+  include-files = [
+    "buildpack.toml",
+    "linux/amd64/bin/build",
+    "linux/amd64/bin/detect",
+    "linux/amd64/bin/run",
+    "linux/amd64/bin/setup-symlinks",
+    "linux/arm64/bin/build",
+    "linux/arm64/bin/detect",
+    "linux/arm64/bin/run",
+    "linux/arm64/bin/setup-symlinks",
+  ]
+
+  pre-package = "./scripts/build.sh --target linux/amd64 --target linux/arm64"
+
+[[stacks]]
+  id = "*"
+
+[[targets]]
+  os = "linux"
+  arch = "amd64"
+
+[[targets]]
+  os = "linux"
+  arch = "arm64"

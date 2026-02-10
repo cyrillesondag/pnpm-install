@@ -1,0 +1,11 @@
+/*.tgz
+.DS_Store
+.idea
+/.bin
+/bin/
+/build
+/linux
+/darwin
+/windows
+
+!offline-mirror/

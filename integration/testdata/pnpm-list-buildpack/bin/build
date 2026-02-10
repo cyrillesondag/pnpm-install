@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -e
+set -u
+set -o pipefail
+
+function main() {
+  printf "Paketo Pnpm List Buildpack\n"
+  pnpm list
+}
+
+main "${@:-}"
