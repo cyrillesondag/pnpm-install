@@ -298,12 +298,13 @@ func testInstallProcess(t *testing.T, context spec.G, it spec.S) {
 
 	context("Execute", func() {
 		var (
-			workingDir       string
-			modulesLayerPath string
-			executions       []pexec.Execution
-			buffer           *bytes.Buffer
-			executable       *fakes.Executable
-			summer           *fakes.Summer
+			workingDir        string
+			modulesLayerPath  string
+			storeDirLayerPath string
+			executions        []pexec.Execution
+			buffer            *bytes.Buffer
+			executable        *fakes.Executable
+			summer            *fakes.Summer
 
 			installProcess pnpminstall.PnpmInstallProcess
 		)
@@ -316,6 +317,9 @@ func testInstallProcess(t *testing.T, context spec.G, it spec.S) {
 			modulesLayerPath, err = os.MkdirTemp("", "modules-dir")
 			Expect(err).NotTo(HaveOccurred())
 
+			storeDirLayerPath, err = os.MkdirTemp("", "store-dir")
+			Expect(err).NotTo(HaveOccurred())
+
 			summer = &fakes.Summer{}
 			buffer = bytes.NewBuffer(nil)
 
@@ -323,16 +327,15 @@ func testInstallProcess(t *testing.T, context spec.G, it spec.S) {
 			executable = &fakes.Executable{}
 			executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 				executions = append(executions, execution)
-				_, err := fmt.Fprintln(execution.Stdout, "stdout output")
-				Expect(err).NotTo(HaveOccurred())
+				if strings.Contains(strings.Join(execution.Args, " "), "store path") {
+					_, err := fmt.Fprintln(execution.Stdout, storeDirLayerPath)
+					Expect(err).NotTo(HaveOccurred())
+				} else {
+					_, err := fmt.Fprintln(execution.Stdout, "stdout output")
+					Expect(err).NotTo(HaveOccurred())
+				}
 				_, err = fmt.Fprintln(execution.Stderr, "stderr output")
 				Expect(err).NotTo(HaveOccurred())
-
-				if strings.Contains(strings.Join(execution.Args, " "), "pnpm-offline-mirror") {
-					_, err := fmt.Fprintln(execution.Stdout, "undefined")
-					Expect(err).NotTo(HaveOccurred())
-
-				}
 
 				return nil
 			}
@@ -352,25 +355,23 @@ func testInstallProcess(t *testing.T, context spec.G, it spec.S) {
 
 				Expect(executions).To(HaveLen(2))
 				Expect(executions[0].Args).To(Equal([]string{
-					"config",
-					"get",
-					"store-dir",
+					"store",
+					"path",
 				}))
 				Expect(executions[0].Env).To(ContainElement(MatchRegexp(`^PATH=.*:node_modules/.bin$`)))
 				Expect(executions[0].Dir).To(Equal(workingDir))
 
 				Expect(executions[1].Args).To(Equal([]string{
 					"install",
-					"--ignore-engines",
 					"--frozen-lockfile",
-					"--production", "false",
+					"--prod", "false",
 					"--dir",
-					filepath.Join(modulesLayerPath, "node_modules"),
+					modulesLayerPath,
 				}))
 				Expect(executions[1].Env).To(ContainElement(MatchRegexp(`^PATH=.*:node_modules/.bin$`)))
 				Expect(executions[1].Dir).To(Equal(workingDir))
 				Expect(buffer.String()).To(ContainLines(
-					fmt.Sprintf("    Running 'pnpm install --frozen-lockfile --prod false --dir %s'", filepath.Join(modulesLayerPath, "node_modules")),
+					fmt.Sprintf("    Running 'pnpm install --frozen-lockfile --prod false --dir %s'", modulesLayerPath),
 					"      stdout output",
 					"      stderr output",
 				))
@@ -384,75 +385,25 @@ func testInstallProcess(t *testing.T, context spec.G, it spec.S) {
 
 				Expect(executions).To(HaveLen(2))
 				Expect(executions[0].Args).To(Equal([]string{
-					"config",
-					"get",
-					"store-dir",
+					"store",
+					"path",
 				}))
 				Expect(executions[0].Env).To(ContainElement(MatchRegexp(`^PATH=.*:node_modules/.bin$`)))
 				Expect(executions[0].Dir).To(Equal(workingDir))
 
 				Expect(executions[1].Args).To(Equal([]string{
 					"install",
-					"--ignore-engines",
 					"--frozen-lockfile",
 					"--dir",
-					filepath.Join(modulesLayerPath, "node_modules"),
+					modulesLayerPath,
 				}))
 				Expect(executions[1].Env).To(ContainElement(MatchRegexp(`^PATH=.*:node_modules/.bin$`)))
 				Expect(executions[1].Dir).To(Equal(workingDir))
 				Expect(buffer.String()).To(ContainLines(
-					fmt.Sprintf("    Running 'pnpm install --frozen-lockfile --dir %s'", filepath.Join(modulesLayerPath, "node_modules")),
+					fmt.Sprintf("    Running 'pnpm install --frozen-lockfile --dir %s'", modulesLayerPath),
 					"      stdout output",
 					"      stderr output",
 				))
-			})
-		})
-
-		context("when there is an offline mirror directory", func() {
-			it.Before(func() {
-				Expect(os.Mkdir(filepath.Join(workingDir, "offline-mirror"), os.ModePerm)).To(Succeed())
-
-				executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
-					executions = append(executions, execution)
-
-					if strings.Contains(strings.Join(execution.Args, " "), "pnpm-offline-mirror") {
-						_, err := fmt.Fprintln(execution.Stdout, "warning some extraneous warning")
-						Expect(err).NotTo(HaveOccurred())
-						_, err = fmt.Fprintln(execution.Stdout, "warning some other warning")
-						Expect(err).NotTo(HaveOccurred())
-						_, err = fmt.Fprintln(execution.Stdout, filepath.Join(workingDir, "offline-mirror"))
-						Expect(err).NotTo(HaveOccurred())
-
-					}
-
-					return nil
-				}
-			})
-
-			it("executes pnpm install in offline mode", func() {
-				err := installProcess.Execute(workingDir, modulesLayerPath, true)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(executions).To(HaveLen(2))
-				Expect(executions[0].Args).To(Equal([]string{
-					"config",
-					"get",
-					"store-dir",
-				}))
-				Expect(executions[0].Env).To(ContainElement(MatchRegexp(`^PATH=.*:node_modules/.bin$`)))
-				Expect(executions[0].Dir).To(Equal(workingDir))
-
-				Expect(executions[1].Args).To(Equal([]string{
-					"install",
-					"--ignore-engines",
-					"--frozen-lockfile",
-					"--offline",
-					"--dir",
-					filepath.Join(modulesLayerPath, "node_modules"),
-				}))
-				Expect(executions[1].Env).To(ContainElement(MatchRegexp(`^PATH=.*:node_modules/.bin$`)))
-				Expect(executions[1].Dir).To(Equal(workingDir))
-				Expect(buffer.String()).To(ContainSubstring(fmt.Sprintf("Running 'pnpm install --frozen-lockfile --offline --dir %s'", filepath.Join(modulesLayerPath, "node_modules"))))
 			})
 		})
 
@@ -460,7 +411,7 @@ func testInstallProcess(t *testing.T, context spec.G, it spec.S) {
 			context("the pnpm executable fails to get config", func() {
 				it.Before(func() {
 					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
-						if strings.Contains(strings.Join(execution.Args, " "), "config") {
+						if strings.Contains(strings.Join(execution.Args, " "), "store") {
 							_, err := fmt.Fprintf(execution.Stdout, "some stdout error")
 							Expect(err).NotTo(HaveOccurred())
 							_, err = fmt.Fprintf(execution.Stderr, "some stderr error")
@@ -482,7 +433,7 @@ func testInstallProcess(t *testing.T, context spec.G, it spec.S) {
 			context("the offline mirror directory cannot be read", func() {
 				it.Before(func() {
 					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
-						if strings.Contains(strings.Join(execution.Args, " "), "config") {
+						if strings.Contains(strings.Join(execution.Args, " "), "store") {
 							return errors.New("pnpm config failed")
 						}
 

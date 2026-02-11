@@ -55,7 +55,7 @@ func (ip PnpmInstallProcess) ShouldRun(workingDir string, metadata map[string]in
 
 	buffer := bytes.NewBuffer(nil)
 	err = ip.executable.Execute(pexec.Execution{
-		Args:   []string{"pnpm", "config", "list"},
+		Args:   []string{"config", "list"},
 		Stdout: buffer,
 		Stderr: buffer,
 		Dir:    workingDir,
