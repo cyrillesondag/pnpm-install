@@ -48,7 +48,7 @@ func TestIntegration(t *testing.T) {
 	var config struct {
 		BuildPlan          string `json:"build-plan"`
 		NodeEngine         string `json:"node-engine"`
-		Yarn               string `json:"pnpm"`
+		Pnpm               string `json:"pnpm"`
 		UbiNodejsExtension string `json:"ubi-nodejs-extension"`
 	}
 
@@ -98,11 +98,14 @@ func TestIntegration(t *testing.T) {
 		Execute(config.NodeEngine)
 	Expect(err).ToNot(HaveOccurred())
 
-	pnpmURI, err = buildpackStore.Get.Execute(config.Pnpm)
+	pnpmURI, err = buildpackStore.Get.
+		WithVersion("0.0.1").
+		Execute(config.Pnpm)
 	Expect(err).ToNot(HaveOccurred())
 
 	pnpmOfflineURI, err = buildpackStore.Get.
 		WithOfflineDependencies().
+		WithVersion("0.0.1").
 		Execute(config.Pnpm)
 	Expect(err).ToNot(HaveOccurred())
 

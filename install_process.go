@@ -146,7 +146,7 @@ func (ip PnpmInstallProcess) SetupModules(workingDir, currentModulesLayerPath, n
 func (ip PnpmInstallProcess) Execute(workingDir, modulesLayerPath string, launch bool) error {
 	environment := os.Environ()
 	environment = append(environment, fmt.Sprintf("PATH=%s%c%s", os.Getenv("PATH"), os.PathListSeparator, filepath.Join("node_modules", ".bin")))
-
+	environment = append(environment, "CI=true")
 	buffer := bytes.NewBuffer(nil)
 
 	err := ip.executable.Execute(pexec.Execution{
@@ -177,7 +177,16 @@ func (ip PnpmInstallProcess) Execute(workingDir, modulesLayerPath string, launch
 		installArgs = append(installArgs, "--offline")
 	}
 
-	installArgs = append(installArgs, "--dir", modulesLayerPath)
+	storePath := filepath.Join(modulesLayerPath, "store_dir")
+	installArgs = append(installArgs, "--store-dir", storePath)
+
+	modulesPath := filepath.Join(modulesLayerPath, "virtual_store")
+	installArgs = append(installArgs, "--virtual-store-dir", modulesPath)
+
+	// 'modules-dir' is not working as expected in pnpm
+	// (see: https://github.com/pnpm/pnpm/issues/5800),
+	// so we leave node_modules in the workspace directory because it only contains symlinks to the virtual store.
+
 	ip.logger.Subprocess("Running 'pnpm %s'", strings.Join(installArgs, " "))
 
 	err = ip.executable.Execute(pexec.Execution{

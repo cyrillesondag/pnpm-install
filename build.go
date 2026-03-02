@@ -23,7 +23,7 @@ type SymlinkManager interface {
 //go:generate faux --interface InstallProcess --output fakes/install_process.go
 type InstallProcess interface {
 	ShouldRun(workingDir string, metadata map[string]interface{}) (run bool, sha string, err error)
-	SetupModules(workingDir, currentModulesLayerPath, nextModulesLayerPath string) (string, error)
+	//SetupModules(workingDir, currentModulesLayerPath, nextModulesLayerPath string) (string, error)
 	Execute(workingDir, modulesLayerPath string, launch bool) error
 }
 
@@ -65,22 +65,19 @@ func Build(entryResolver EntryResolver,
 		}
 
 		if globalNpmrcPath != "" {
-			err = symlinker.Link(globalNpmrcPath, filepath.Join(homeDir, ".npmrc"))
+
+			folderPath := filepath.Join(homeDir, ".config", "pnpm")
+			err = os.MkdirAll(folderPath, os.ModePerm)
 			if err != nil {
 				return packit.BuildResult{}, err
 			}
-		}
 
-		pnpmWorkspacePath, err := configurationManager.DeterminePath("pnpm-workspace", context.Platform.Path, "pnpm-workspace.yaml")
-		if err != nil {
-			return packit.BuildResult{}, err
-		}
-
-		if pnpmWorkspacePath != "" {
-			err = symlinker.Link(pnpmWorkspacePath, filepath.Join(homeDir, "pnpm-workspace.yaml"))
+			err = symlinker.Link(globalNpmrcPath, filepath.Join(folderPath, "rc"))
 			if err != nil {
 				return packit.BuildResult{}, err
 			}
+
+			logger.Subprocess("Linking global npmrc to user's pnpm config")
 		}
 
 		launch, build := entryResolver.MergeLayerTypes(PlanDependencyNodeModules, context.Plan.Entries)
@@ -91,7 +88,7 @@ func Build(entryResolver EntryResolver,
 		}
 
 		var layers []packit.Layer
-		var currentModLayer string
+		//var currentModLayer string
 		if build {
 			layer, err := context.Layers.Get("build-modules")
 			if err != nil {
@@ -115,10 +112,10 @@ func Build(entryResolver EntryResolver,
 					return packit.BuildResult{}, err
 				}
 
-				currentModLayer, err = installProcess.SetupModules(projectPath, currentModLayer, layer.Path)
-				if err != nil {
-					return packit.BuildResult{}, err
-				}
+				//currentModLayer, err = installProcess.SetupModules(projectPath, currentModLayer, layer.Path)
+				//if err != nil {
+				//	return packit.BuildResult{}, err
+				//}
 
 				duration, err := clock.Measure(func() error {
 					return installProcess.Execute(projectPath, layer.Path, false)
@@ -179,7 +176,7 @@ func Build(entryResolver EntryResolver,
 
 			layer.Build = true
 			layer.Cache = true
-			
+
 			layers = append(layers, layer)
 		}
 
@@ -206,10 +203,10 @@ func Build(entryResolver EntryResolver,
 					return packit.BuildResult{}, err
 				}
 
-				_, err = installProcess.SetupModules(projectPath, currentModLayer, layer.Path)
-				if err != nil {
-					return packit.BuildResult{}, err
-				}
+				//_, err = installProcess.SetupModules(projectPath, currentModLayer, layer.Path)
+				//if err != nil {
+				//	return packit.BuildResult{}, err
+				//}
 
 				duration, err := clock.Measure(func() error {
 					return installProcess.Execute(projectPath, layer.Path, true)
@@ -262,7 +259,7 @@ func Build(entryResolver EntryResolver,
 					}
 				}
 
-				layer.ExecD = []string{filepath.Join(context.CNBPath, "bin", "setup-symlinks")}
+				//layer.ExecD = []string{filepath.Join(context.CNBPath, "bin", "setup-symlinks")}
 
 			} else {
 				logger.Process("Reusing cached layer %s", layer.Path)
@@ -308,26 +305,13 @@ func checkSbomDisabled() (bool, error) {
 }
 
 func ensureNodeModulesSymlink(projectDir, targetLayer, tmpDir string) error {
-	projectDirNodeModules := filepath.Join(projectDir, "node_modules")
-	layerNodeModules := filepath.Join(targetLayer, "node_modules")
-	tmpNodeModules := filepath.Join(tmpDir, "node_modules")
+	//projectDirNodeModules := filepath.Join(projectDir, "node_modules")
+	//layerNodeModules := filepath.Join(targetLayer, "node_modules")
 
-	for _, d := range []string{projectDirNodeModules, tmpNodeModules} {
-		err := os.RemoveAll(d)
-		if err != nil {
-			return err
-		}
-	}
-
-	err := os.Symlink(tmpNodeModules, projectDirNodeModules)
-	if err != nil {
-		return err
-	}
-
-	err = os.Symlink(layerNodeModules, tmpNodeModules)
-	if err != nil {
-		return err
-	}
+	//err := os.Symlink(layerNodeModules, projectDirNodeModules)
+	//if err != nil {
+	//	return err
+	//}
 
 	return nil
 }

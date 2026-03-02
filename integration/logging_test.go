@@ -38,6 +38,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 		}
 	})
 
+	buildpackID := strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")
 	context("when app is NOT vendored", func() {
 		var (
 			image occam.Image
@@ -88,14 +89,14 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				extenderBuildStr+"    Selected default build process: 'pnpm install'",
 				extenderBuildStr+"",
 				extenderBuildStr+"  Executing launch environment install process",
-				fmt.Sprintf(extenderBuildStr+"    Running 'pnpm install --frozen-lockfile --dir /layers/%s/launch-modules/node_modules'", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf(extenderBuildStr+"    Running 'pnpm install --frozen-lockfile --store-dir /layers/%s/launch-modules/store_dir --virtual-store-dir /layers/%s/launch-modules/virtual_store'", buildpackID, buildpackID),
 			))
 			Expect(logs).To(ContainLines(
 				extenderBuildStr+"  Configuring launch environment",
 				extenderBuildStr+"    NODE_PROJECT_PATH -> \"/workspace\"",
-				fmt.Sprintf("%s    PATH              -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", extenderBuildStr, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("%s    PATH              -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", extenderBuildStr, buildpackID),
 				extenderBuildStr+"",
-				fmt.Sprintf(`%s  Generating SBOM for /layers/%s/launch-modules`, extenderBuildStr, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf(`%s  Generating SBOM for /layers/%s/launch-modules`, extenderBuildStr, buildpackID),
 				MatchRegexp(extenderBuildStrEscaped+`      Completed in (\d+)(\.\d+)?(ms|s)`),
 				extenderBuildStr+"",
 				extenderBuildStr+"  Writing SBOM in the following format(s):",
@@ -151,6 +152,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred())
 
+			buildpackID := buildpackID
 			Expect(logs).To(ContainLines(
 				fmt.Sprintf("%s %s", buildpackInfo.Buildpack.Name, "1.2.3"),
 				"  Resolving installation process",
@@ -160,14 +162,14 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				"    Selected default build process: 'pnpm install'",
 				"",
 				"  Executing launch environment install process",
-				fmt.Sprintf("    Running 'pnpm install --frozen-lockfile --offline --dir /layers/%s/launch-modules/node_modules'", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("    Running 'pnpm install --frozen-lockfile --offline --store-dir /layers/%s/launch-modules/store_dir --virtual-store-dir /layers/%s/launch-modules/virtual_store'", buildpackID, buildpackID),
 			))
 			Expect(logs).To(ContainLines(
 				"  Configuring launch environment",
 				"    NODE_PROJECT_PATH -> \"/workspace\"",
-				fmt.Sprintf("    PATH              -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("    PATH              -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", buildpackID),
 				"",
-				fmt.Sprintf(`  Generating SBOM for /layers/%s/launch-modules`, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf(`  Generating SBOM for /layers/%s/launch-modules`, buildpackID),
 				MatchRegexp(`      Completed in (\d+)(\.\d+)?(ms|s)`),
 				"",
 			))
@@ -215,6 +217,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred())
 
+			buildpackID := buildpackID
 			Expect(logs).To(ContainLines(
 				fmt.Sprintf("%s%s %s", extenderBuildStr, buildpackInfo.Buildpack.Name, "1.2.3"),
 				extenderBuildStr+"  Resolving installation process",
@@ -224,14 +227,14 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				extenderBuildStr+"    Selected default build process: 'pnpm install'",
 				extenderBuildStr+"",
 				extenderBuildStr+"  Executing build environment install process",
-				fmt.Sprintf("%s    Running 'pnpm install --frozen-lockfile --prod false --dir /layers/%s/build-modules/node_modules'", extenderBuildStr, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("%s    Running 'pnpm install --frozen-lockfile --prod false --store-dir /layers/%s/launch-modules/store_dir --virtual-store-dir /layers/%s/launch-modules/virtual_store'", extenderBuildStr, buildpackID, buildpackID),
 			))
 			Expect(logs).To(ContainLines(
 				extenderBuildStr+"  Configuring build environment",
 				extenderBuildStr+`    NODE_ENV -> "development"`,
-				fmt.Sprintf("%s    PATH     -> \"$PATH:/layers/%s/build-modules/node_modules/.bin\"", extenderBuildStr, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("%s    PATH     -> \"$PATH:/layers/%s/build-modules/node_modules/.bin\"", extenderBuildStr, buildpackID),
 				extenderBuildStr+"",
-				fmt.Sprintf(`%s  Generating SBOM for /layers/%s/build-modules`, extenderBuildStr, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf(`%s  Generating SBOM for /layers/%s/build-modules`, extenderBuildStr, buildpackID),
 				MatchRegexp(extenderBuildStrEscaped+`      Completed in (\d+)(\.\d+)?(ms|s)`),
 				extenderBuildStr+"",
 				extenderBuildStr+"  Writing SBOM in the following format(s):",
@@ -246,14 +249,14 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				extenderBuildStr+"    Selected default build process: 'pnpm install'",
 				extenderBuildStr+"",
 				extenderBuildStr+"  Executing launch environment install process",
-				fmt.Sprintf("%s    Running 'pnpm install --frozen-lockfile --dir /layers/%s/launch-modules/node_modules'", extenderBuildStr, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("%s    Running 'pnpm install --frozen-lockfile --dir /layers/%s/launch-modules/node_modules'", extenderBuildStr, buildpackID),
 			))
 			Expect(logs).To(ContainLines(
 				extenderBuildStr+"  Configuring launch environment",
 				extenderBuildStr+"    NODE_PROJECT_PATH -> \"/workspace\"",
-				fmt.Sprintf("%s    PATH              -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", extenderBuildStr, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("%s    PATH              -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", extenderBuildStr, buildpackID),
 				extenderBuildStr+"",
-				fmt.Sprintf(`%s  Generating SBOM for /layers/%s/launch-modules`, extenderBuildStr, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf(`%s  Generating SBOM for /layers/%s/launch-modules`, extenderBuildStr, buildpackID),
 				MatchRegexp(extenderBuildStrEscaped+`      Completed in (\d+)(\.\d+)?(ms|s)`),
 				extenderBuildStr+"",
 				extenderBuildStr+"  Writing SBOM in the following format(s):",
