@@ -30,7 +30,7 @@ func main() {
 	packageManagerConfigurationManager := pnpminstall.NewPackageManagerConfigurationManager(servicebindings.NewResolver(), logger)
 	entryResolver := draft.NewPlanner()
 	home, err := os.UserHomeDir()
-	tmpDir := os.TempDir()
+
 	if err != nil {
 		// not tested
 		log.Fatal(err)
@@ -46,7 +46,6 @@ func main() {
 			sbomGenerator,
 			chronos.DefaultClock,
 			logger,
-			tmpDir,
 		),
 	)
 }

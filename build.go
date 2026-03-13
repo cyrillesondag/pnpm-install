@@ -23,8 +23,8 @@ type SymlinkManager interface {
 //go:generate faux --interface InstallProcess --output fakes/install_process.go
 type InstallProcess interface {
 	ShouldRun(workingDir string, metadata map[string]interface{}) (run bool, sha string, err error)
-	//SetupModules(workingDir, currentModulesLayerPath, nextModulesLayerPath string) (string, error)
-	Execute(workingDir, modulesLayerPath string, launch bool) error
+	SetupModules(workingDir string) error
+	Execute(workingDir, modulesLayerPath, storeDir string, launch bool) error
 }
 
 //go:generate faux --interface EntryResolver --output fakes/entry_resolver.go
@@ -39,7 +39,8 @@ type SBOMGenerator interface {
 
 //go:generate faux --interface ConfigurationManager --output fakes/configuration_manager.go
 type ConfigurationManager interface {
-	DeterminePath(typ, platformDir, entry string) (path string, err error)
+	DeterminePath(typ, platformDir string) (path string, err error)
+	DetermineEntryPath(typ, platformDir, entry string) (path string, err error)
 }
 
 func Build(entryResolver EntryResolver,
@@ -49,8 +50,7 @@ func Build(entryResolver EntryResolver,
 	installProcess InstallProcess,
 	sbomGenerator SBOMGenerator,
 	clock chronos.Clock,
-	logger scribe.Emitter,
-	tmpDir string) packit.BuildFunc {
+	logger scribe.Emitter) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
 		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
 
@@ -59,7 +59,7 @@ func Build(entryResolver EntryResolver,
 			return packit.BuildResult{}, err
 		}
 
-		globalNpmrcPath, err := configurationManager.DeterminePath("npmrc", context.Platform.Path, ".npmrc")
+		globalNpmrcPath, err := configurationManager.DetermineEntryPath("npmrc", context.Platform.Path, ".npmrc")
 		if err != nil {
 			return packit.BuildResult{}, err
 		}
@@ -88,7 +88,24 @@ func Build(entryResolver EntryResolver,
 		}
 
 		var layers []packit.Layer
-		//var currentModLayer string
+
+		storeDirPath, err := configurationManager.DeterminePath("pnpm-store-dir", context.Platform.Path)
+		if err != nil {
+			return packit.BuildResult{}, err
+		}
+
+		if storeDirPath == "" {
+			storeLayer, err := context.Layers.Get("pnpm-store")
+			if err != nil {
+				return packit.BuildResult{}, err
+			}
+
+			storeLayer.Cache = true
+
+			storeDirPath = storeLayer.Path
+			layers = append(layers, storeLayer)
+		}
+
 		if build {
 			layer, err := context.Layers.Get("build-modules")
 			if err != nil {
@@ -112,13 +129,13 @@ func Build(entryResolver EntryResolver,
 					return packit.BuildResult{}, err
 				}
 
-				//currentModLayer, err = installProcess.SetupModules(projectPath, currentModLayer, layer.Path)
-				//if err != nil {
-				//	return packit.BuildResult{}, err
-				//}
+				err = installProcess.SetupModules(projectPath)
+				if err != nil {
+					return packit.BuildResult{}, err
+				}
 
 				duration, err := clock.Measure(func() error {
-					return installProcess.Execute(projectPath, layer.Path, false)
+					return installProcess.Execute(projectPath, layer.Path, storeDirPath, false)
 				})
 				if err != nil {
 					return packit.BuildResult{}, err
@@ -131,7 +148,7 @@ func Build(entryResolver EntryResolver,
 					"cache_sha": sha,
 				}
 
-				err = ensureNodeModulesSymlink(projectPath, layer.Path, tmpDir)
+				err = ensureNodeModulesSymlink(projectPath, layer.Path)
 				if err != nil {
 					return packit.BuildResult{}, err
 				}
@@ -168,14 +185,13 @@ func Build(entryResolver EntryResolver,
 			} else {
 				logger.Process("Reusing cached layer %s", layer.Path)
 
-				err = ensureNodeModulesSymlink(projectPath, layer.Path, tmpDir)
+				err = ensureNodeModulesSymlink(projectPath, layer.Path)
 				if err != nil {
 					return packit.BuildResult{}, err
 				}
 			}
 
 			layer.Build = true
-			layer.Cache = true
 
 			layers = append(layers, layer)
 		}
@@ -203,13 +219,13 @@ func Build(entryResolver EntryResolver,
 					return packit.BuildResult{}, err
 				}
 
-				//_, err = installProcess.SetupModules(projectPath, currentModLayer, layer.Path)
-				//if err != nil {
-				//	return packit.BuildResult{}, err
-				//}
+				err = installProcess.SetupModules(projectPath)
+				if err != nil {
+					return packit.BuildResult{}, err
+				}
 
 				duration, err := clock.Measure(func() error {
-					return installProcess.Execute(projectPath, layer.Path, true)
+					return installProcess.Execute(projectPath, layer.Path, storeDirPath, true)
 				})
 				if err != nil {
 					return packit.BuildResult{}, err
@@ -219,7 +235,7 @@ func Build(entryResolver EntryResolver,
 				logger.Break()
 
 				if !build {
-					err = ensureNodeModulesSymlink(projectPath, layer.Path, tmpDir)
+					err = ensureNodeModulesSymlink(projectPath, layer.Path)
 					if err != nil {
 						return packit.BuildResult{}, err
 					}
@@ -264,7 +280,7 @@ func Build(entryResolver EntryResolver,
 			} else {
 				logger.Process("Reusing cached layer %s", layer.Path)
 				if !build {
-					err = ensureNodeModulesSymlink(projectPath, layer.Path, tmpDir)
+					err = ensureNodeModulesSymlink(projectPath, layer.Path)
 					if err != nil {
 						return packit.BuildResult{}, err
 					}
@@ -304,14 +320,14 @@ func checkSbomDisabled() (bool, error) {
 	return false, nil
 }
 
-func ensureNodeModulesSymlink(projectDir, targetLayer, tmpDir string) error {
-	//projectDirNodeModules := filepath.Join(projectDir, "node_modules")
-	//layerNodeModules := filepath.Join(targetLayer, "node_modules")
+func ensureNodeModulesSymlink(projectDir, targetLayer string) error {
+	projectDirNodeModules := filepath.Join(projectDir, "node_modules")
+	layerNodeModules := filepath.Join(targetLayer, "node_modules")
 
-	//err := os.Symlink(layerNodeModules, projectDirNodeModules)
-	//if err != nil {
-	//	return err
-	//}
+	err := os.Symlink(layerNodeModules, projectDirNodeModules)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

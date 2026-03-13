@@ -87,7 +87,7 @@ func testDevDependenciesDuringBuild(t *testing.T, context spec.G, it spec.S) {
 
 			// check the contents of the node modules
 			container, err = docker.Container.Run.
-				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/virtual_store",
+				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules",
 					strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
 				Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())

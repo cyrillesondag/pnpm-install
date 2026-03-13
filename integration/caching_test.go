@@ -63,7 +63,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	context("when NODE_ENV changes", func() {
-		it("does not reuse the virtual_store layer", func() {
+		it("does not reuse the node_modules layer", func() {
 			var err error
 			var container occam.Container
 
@@ -91,7 +91,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(firstImage.Buildpacks[2].Layers).To(HaveKey("launch-modules"))
 
 			container, err = docker.Container.Run.
-				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/virtual_store", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
+				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
 				Execute(firstImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -115,7 +115,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(secondImage.Buildpacks[2].Layers).To(HaveKey("launch-modules"))
 
 			container, err = docker.Container.Run.
-				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/virtual_store", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
+				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
 				Execute(secondImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -137,7 +137,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	context("when the pnpm environment changes", func() {
-		it("does not reuse the virtual_store layer", func() {
+		it("does not reuse the node_modules layer", func() {
 			var err error
 			var container occam.Container
 
@@ -149,7 +149,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 					settings.Extensions.UbiNodejsExtension.Online,
 				).
 				WithPullPolicy(pullPolicy).
-				WithEnv(map[string]string{"PNPM_IGNORE_SCRIPTS": "true"}).
+				WithEnv(map[string]string{"npm_config_ignore_scripts": "true"}).
 				WithBuildpacks(nodeURI, pnpmURI, buildpackURI, buildPlanURI)
 
 			firstImage, firstLogs, err := build.Execute(name, source)
@@ -162,7 +162,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(firstImage.Buildpacks[2].Layers).To(HaveKey("launch-modules"))
 
 			container, err = docker.Container.Run.
-				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/virtual_store", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
+				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
 				Execute(firstImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -175,7 +175,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			}).Should(ContainSubstring("leftpad"))
 
 			secondImage, secondLogs, err := build.
-				WithEnv(map[string]string{"PNPM_IGNORE_SCRIPTS": "false"}).
+				WithEnv(map[string]string{"npm_config_ignore_scripts": "false"}).
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), secondLogs.String)
 
@@ -186,7 +186,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(secondImage.Buildpacks[2].Layers).To(HaveKey("launch-modules"))
 
 			container, err = docker.Container.Run.
-				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/virtual_store", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
+				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
 				Execute(secondImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -209,7 +209,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 	context("a fixture is pushed twice", func() {
 		context("online", func() {
-			it("reuses the virtual_store layer", func() {
+			it("reuses the node_modules layer", func() {
 				var err error
 				var container occam.Container
 
@@ -233,7 +233,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 				Expect(firstImage.Buildpacks[2].Layers).To(HaveKey("launch-modules"))
 
 				container, err = docker.Container.Run.
-					WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/virtual_store", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
+					WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
 					Execute(firstImage.ID)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -255,7 +255,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 				Expect(secondImage.Buildpacks[2].Layers).To(HaveKey("launch-modules"))
 
 				container, err = docker.Container.Run.
-					WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/virtual_store", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
+					WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
 					Execute(secondImage.ID)
 				Expect(err).NotTo(HaveOccurred())
 

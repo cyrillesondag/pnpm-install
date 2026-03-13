@@ -89,7 +89,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				extenderBuildStr+"    Selected default build process: 'pnpm install'",
 				extenderBuildStr+"",
 				extenderBuildStr+"  Executing launch environment install process",
-				fmt.Sprintf(extenderBuildStr+"    Running 'pnpm install --frozen-lockfile --store-dir /layers/%s/launch-modules/store_dir --virtual-store-dir /layers/%s/launch-modules/virtual_store'", buildpackID, buildpackID),
+				fmt.Sprintf(extenderBuildStr+"    Running 'pnpm install --frozen-lockfile --store-dir /layers/%s/pnpm-store'", buildpackID),
 			))
 			Expect(logs).To(ContainLines(
 				extenderBuildStr+"  Configuring launch environment",
@@ -162,7 +162,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				"    Selected default build process: 'pnpm install'",
 				"",
 				"  Executing launch environment install process",
-				fmt.Sprintf("    Running 'pnpm install --frozen-lockfile --offline --store-dir /layers/%s/launch-modules/store_dir --virtual-store-dir /layers/%s/launch-modules/virtual_store'", buildpackID, buildpackID),
+				fmt.Sprintf("    Running 'pnpm install --frozen-lockfile --offline --store-dir /layers/%s/pnpm-store'", buildpackID),
 			))
 			Expect(logs).To(ContainLines(
 				"  Configuring launch environment",
@@ -227,7 +227,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				extenderBuildStr+"    Selected default build process: 'pnpm install'",
 				extenderBuildStr+"",
 				extenderBuildStr+"  Executing build environment install process",
-				fmt.Sprintf("%s    Running 'pnpm install --frozen-lockfile --prod false --store-dir /layers/%s/launch-modules/store_dir --virtual-store-dir /layers/%s/launch-modules/virtual_store'", extenderBuildStr, buildpackID, buildpackID),
+				fmt.Sprintf("%s    Running 'pnpm install --frozen-lockfile --prod false --store-dir /layers/%s/pnpm-store'", extenderBuildStr, buildpackID),
 			))
 			Expect(logs).To(ContainLines(
 				extenderBuildStr+"  Configuring build environment",
@@ -249,7 +249,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				extenderBuildStr+"    Selected default build process: 'pnpm install'",
 				extenderBuildStr+"",
 				extenderBuildStr+"  Executing launch environment install process",
-				fmt.Sprintf("%s    Running 'pnpm install --frozen-lockfile --dir /layers/%s/launch-modules/node_modules'", extenderBuildStr, buildpackID),
+				fmt.Sprintf("%s    Running 'pnpm install --frozen-lockfile --store-dir /layers/%s/pnpm-store'", extenderBuildStr, buildpackID),
 			))
 			Expect(logs).To(ContainLines(
 				extenderBuildStr+"  Configuring launch environment",

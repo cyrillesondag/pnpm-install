@@ -76,7 +76,7 @@ func testProjectPathApp(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			container, err = docker.Container.Run.
-				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/virtual_store", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
+				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
 				Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -131,7 +131,7 @@ func testProjectPathApp(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			container, err = docker.Container.Run.
-				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/virtual_store", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
+				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
 				Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())
 

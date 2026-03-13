@@ -69,7 +69,7 @@ func (ip PnpmInstallProcess) ShouldRun(workingDir string, metadata map[string]in
 
 	file, err := os.CreateTemp("", "config-file")
 	if err != nil {
-		return true, "", fmt.Errorf("failed to create temp file for %s: %w", file.Name(), err)
+		return true, "", fmt.Errorf("failed to create temp file: %w", err)
 	}
 	defer func() {
 		if closeFileErr := file.Close(); closeFileErr != nil && err == nil {
@@ -95,58 +95,35 @@ func (ip PnpmInstallProcess) ShouldRun(workingDir string, metadata map[string]in
 	return false, "", nil
 }
 
-func (ip PnpmInstallProcess) SetupModules(workingDir, currentModulesLayerPath, nextModulesLayerPath string) (string, error) {
-	if currentModulesLayerPath != "" {
-		err := fs.Copy(filepath.Join(currentModulesLayerPath, "node_modules"), filepath.Join(nextModulesLayerPath, "node_modules"))
-		if err != nil {
-			return "", fmt.Errorf("failed to copy node_modules directory: %w", err)
+func (ip PnpmInstallProcess) SetupModules(workingDir string) error {
+	file, err := os.Lstat(filepath.Join(workingDir, "node_modules"))
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("failed to stat node_modules directory: %w", err)
 		}
 
-	} else {
-
-		file, err := os.Lstat(filepath.Join(workingDir, "node_modules"))
-		if err != nil {
-			if !errors.Is(err, os.ErrNotExist) {
-				return "", fmt.Errorf("failed to stat node_modules directory: %w", err)
-			}
-
-		}
-
-		if file != nil && file.Mode()&os.ModeSymlink == os.ModeSymlink {
-			err = os.RemoveAll(filepath.Join(workingDir, "node_modules"))
-			if err != nil {
-				//not tested
-				return "", fmt.Errorf("failed to remove node_modules symlink: %w", err)
-			}
-		}
-
-		err = os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm)
-		if err != nil {
-			//not directly tested
-			return "", fmt.Errorf("failed to create node_modules directory: %w", err)
-		}
-
-		err = fs.Move(filepath.Join(workingDir, "node_modules"), filepath.Join(nextModulesLayerPath, "node_modules"))
-		if err != nil {
-			return "", fmt.Errorf("failed to move node_modules directory to layer: %w", err)
-		}
-
-		err = os.Symlink(filepath.Join(nextModulesLayerPath, "node_modules"), filepath.Join(workingDir, "node_modules"))
-		if err != nil {
-			return "", fmt.Errorf("failed to symlink node_modules into working directory: %w", err)
-		}
 	}
 
-	return nextModulesLayerPath, nil
+	if file != nil && file.Mode()&os.ModeSymlink == os.ModeSymlink {
+		err = os.RemoveAll(filepath.Join(workingDir, "node_modules"))
+		if err != nil {
+			//not tested
+			return fmt.Errorf("failed to remove node_modules symlink: %w", err)
+		}
+	}
+	return nil
+
 }
 
 // The build process here relies on pnpm install ... --frozen-lockfile note that
 // even if we provide a node_modules directory we must run a 'pnpm install' as
 // this is the ONLY way to rebuild native extensions.
-func (ip PnpmInstallProcess) Execute(workingDir, modulesLayerPath string, launch bool) error {
+func (ip PnpmInstallProcess) Execute(workingDir, modulesLayerPath, storeDir string, launch bool) error {
 	environment := os.Environ()
 	environment = append(environment, fmt.Sprintf("PATH=%s%c%s", os.Getenv("PATH"), os.PathListSeparator, filepath.Join("node_modules", ".bin")))
+
 	environment = append(environment, "CI=true")
+
 	buffer := bytes.NewBuffer(nil)
 
 	err := ip.executable.Execute(pexec.Execution{
@@ -177,15 +154,7 @@ func (ip PnpmInstallProcess) Execute(workingDir, modulesLayerPath string, launch
 		installArgs = append(installArgs, "--offline")
 	}
 
-	storePath := filepath.Join(modulesLayerPath, "store_dir")
-	installArgs = append(installArgs, "--store-dir", storePath)
-
-	modulesPath := filepath.Join(modulesLayerPath, "virtual_store")
-	installArgs = append(installArgs, "--virtual-store-dir", modulesPath)
-
-	// 'modules-dir' is not working as expected in pnpm
-	// (see: https://github.com/pnpm/pnpm/issues/5800),
-	// so we leave node_modules in the workspace directory because it only contains symlinks to the virtual store.
+	installArgs = append(installArgs, "--store-dir", storeDir)
 
 	ip.logger.Subprocess("Running 'pnpm %s'", strings.Join(installArgs, " "))
 
@@ -198,6 +167,13 @@ func (ip PnpmInstallProcess) Execute(workingDir, modulesLayerPath string, launch
 	})
 	if err != nil {
 		return fmt.Errorf("failed to execute pnpm install: %w", err)
+	}
+
+	// 'modules-dir' is not working as expected in pnpm (see: https://github.com/pnpm/pnpm/issues/5800),
+	// so we leave node_modules in the workspace then move back to the modulesLayerPath.
+	err = fs.Move(filepath.Join(workingDir, "node_modules"), filepath.Join(modulesLayerPath, "node_modules"))
+	if err != nil {
+		return err
 	}
 
 	return nil

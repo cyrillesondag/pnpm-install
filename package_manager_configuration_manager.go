@@ -25,7 +25,7 @@ func NewPackageManagerConfigurationManager(bindingResolver BindingResolver, logs
 	}
 }
 
-func (p PackageManagerConfigurationManager) DeterminePath(typ, platformDir, entry string) (string, error) {
+func (p PackageManagerConfigurationManager) DetermineEntryPath(typ, platformDir, entry string) (string, error) {
 	bindings, err := p.bindingResolver.Resolve(typ, "", platformDir)
 	if err != nil {
 		return "", err
@@ -43,6 +43,24 @@ func (p PackageManagerConfigurationManager) DeterminePath(typ, platformDir, entr
 		}
 
 		return filepath.Join(bindings[0].Path, entry), nil
+	}
+
+	return "", nil
+}
+
+func (p PackageManagerConfigurationManager) DeterminePath(typ, platformDir string) (string, error) {
+	bindings, err := p.bindingResolver.Resolve(typ, "", platformDir)
+	if err != nil {
+		return "", err
+	}
+
+	if len(bindings) > 1 {
+		return "", fmt.Errorf("failed: binding resolver found more than one binding of type '%s'", typ)
+	}
+
+	if len(bindings) == 1 {
+		p.logs.Process("Loading service binding of type '%s'", typ)
+		return bindings[0].Path, nil
 	}
 
 	return "", nil
